@@ -5,6 +5,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth.models import Group
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
@@ -147,6 +148,7 @@ class GroupPermissionTests(TestDataMixin, TestCase):
             app_label='guardian-tests')
 
     def test_assignement(self):
+        cache.clear()
         self.assertFalse(self.user.has_perm('change_contenttype', self.ctype))
         self.assertFalse(self.user.has_perm('contenttypes.change_contenttype',
             self.ctype))

@@ -6,6 +6,7 @@ from django.contrib.auth import models as auth_app
 from django.contrib.auth.management import create_permissions
 from django.contrib.auth.models import Group, Permission, AnonymousUser
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.test import TestCase
 
 from guardian.core import ObjectPermissionChecker
@@ -91,6 +92,7 @@ class ObjectPermissionCheckerTest(ObjectPermissionTestCase):
         self.assertTrue( [] == list(check.get_perms(self.ctype)) )
 
     def test_superuser(self):
+        cache.clear()
         user = User.objects.create(username='superuser', is_superuser=True)
         check = ObjectPermissionChecker(user)
         ctype = ContentType.objects.get_for_model(self.ctype)

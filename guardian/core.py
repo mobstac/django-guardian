@@ -60,9 +60,14 @@ class ObjectPermissionChecker(object):
         :param obj: Django model instance for which permission should be checked
 
         """
+
+        if self.user and not self.user.is_active:
+            return []
+
         User = get_user_model()
         ctype = ContentType.objects.get_for_model(obj)
         key = self.get_local_cache_key(obj)
+
         if cache.get(key) is None:
             group_model = get_group_obj_perms_model(obj)
             group_rel_name = group_model.permission.field.related_query_name()
@@ -82,9 +87,7 @@ class ObjectPermissionChecker(object):
             else:
                 group_filters['%s__content_object' % group_rel_name] = obj
 
-            if self.user and not self.user.is_active:
-                return []
-            elif self.user and self.user.is_superuser:
+            if self.user and self.user.is_superuser:
                 perms = list(chain(*Permission.objects
                     .filter(content_type=ctype)
                     .values_list("codename")))
@@ -121,5 +124,8 @@ class ObjectPermissionChecker(object):
         Returns cache key for ``_obj_perms_cache`` dict.
         """
         ctype = ContentType.objects.get_for_model(obj)
-        return "guardian_ctype%d_obj%d" % (ctype.id, obj.pk)
+        if self.user:
+            return "guardian_user%d_ctype%d_obj%d" % (self.user.pk, ctype.id, obj.pk)
+        else:
+            return "guardian_group%d_ctype%d_obj%d" % (self.group.pk, ctype.id, obj.pk)
 

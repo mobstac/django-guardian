@@ -1,8 +1,11 @@
 from __future__ import unicode_literals
 
+from django.core.cache import cache
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
 
+from guardian.compat import get_user_model
+from guardian.core import ObjectPermissionChecker
 from guardian.exceptions import ObjectNotPersisted
 from guardian.models import Permission
 import warnings
@@ -39,6 +42,15 @@ class UserObjectPermissionManager(BaseObjectPermissionManager):
         else:
             kwargs['content_object'] = obj
         obj_perm, created = self.get_or_create(**kwargs)
+
+        # Add to cache
+        check = ObjectPermissionChecker(user)
+        key = check.get_local_cache_key(obj)
+        cache_perms = cache.get(key)
+        if cache_perms is not None and perm not in cache_perms:
+            cache_perms.append(perm)
+            cache.set(key, cache_perms)
+
         return obj_perm
 
     def assign(self, perm, user, obj):
@@ -67,6 +79,20 @@ class UserObjectPermissionManager(BaseObjectPermissionManager):
         else:
             filters['content_object__pk'] = obj.pk
         self.filter(**filters).delete()
+
+        #Remove for cache
+        check = ObjectPermissionChecker(user)
+        key = check.get_local_cache_key(obj)
+        cache_perms = cache.get(key)
+        if cache_perms is not None and perm in cache_perms:
+            cache_index = 0
+            for cache_perm in cache_perms:
+                if perm == cache_perm:
+                    cache_perms.pop(cache_index)
+                    break
+                cache_index += 1
+            cache.set(key, cache_perms)
+
 
     def get_for_object(self, user, obj):
         if getattr(obj, 'pk', None) is None:
@@ -100,6 +126,22 @@ class GroupObjectPermissionManager(BaseObjectPermissionManager):
         else:
             kwargs['content_object'] = obj
         obj_perm, created = self.get_or_create(**kwargs)
+
+        # Add to cache
+        check = ObjectPermissionChecker(group)
+        key = check.get_local_cache_key(obj)
+        cache_perms = cache.get(key)
+        if cache_perms is not None and perm not in cache_perms:
+            cache_perms.append(perm)
+            cache.set(key, cache_perms)
+
+        User = get_user_model()
+        users = User.objects.filter(groups = group)
+        for user in users:
+            check = ObjectPermissionChecker(user)
+            key = check.get_local_cache_key(obj)
+            cache.delete(key)
+
         return obj_perm
 
     def assign(self, perm, user, obj):
@@ -126,6 +168,26 @@ class GroupObjectPermissionManager(BaseObjectPermissionManager):
 
         self.filter(**filters).delete()
 
+        #Remove for cache
+        check = ObjectPermissionChecker(group)
+        key = check.get_local_cache_key(obj)
+        cache_perms = cache.get(key)
+        if cache_perms is not None and perm in cache_perms:
+            cache_index = 0
+            for cache_perm in cache_perms:
+                if perm == cache_perm:
+                    cache_perms.pop(cache_index)
+                    break
+                cache_index += 1
+            cache.set(key, cache_perms)
+
+        User = get_user_model()
+        users = User.objects.filter(groups = group)
+        for user in users:
+            check = ObjectPermissionChecker(user)
+            key = check.get_local_cache_key(obj)
+            cache.delete(key)
+        
     def get_for_object(self, group, obj):
         if getattr(obj, 'pk', None) is None:
             raise ObjectNotPersisted("Object %s needs to be persisted first"

@@ -126,7 +126,7 @@ def clean_orphan_obj_perms():
     """
     from guardian.models import UserObjectPermission
     from guardian.models import GroupObjectPermission
-
+    from django.core.cache import cache
 
     deleted = 0
     # TODO: optimise
@@ -138,6 +138,7 @@ def clean_orphan_obj_perms():
             deleted += 1
     logger.info("Total removed orphan object permissions instances: %d" %
         deleted)
+    cache.clear()
     return deleted
 
 

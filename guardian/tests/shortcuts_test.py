@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 
 import warnings
 
+from django.core.cache import cache
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.query import QuerySet
 from django.test import TestCase
@@ -253,6 +254,7 @@ class GetUsersWithPermsTest(TestCase):
             self.assertEqual(set(perms), set(expected[key]))
 
     def test_attach_groups_only_has_perms(self):
+        cache.clear()
         self.user1.groups.add(self.group1)
         assign_perm("change_contenttype", self.group1, self.obj1)
         result = get_users_with_perms(self.obj1, attach_perms=True)
@@ -295,6 +297,7 @@ class GetUsersWithPermsTest(TestCase):
         self.assertEqual(set(result), expected)
 
     def test_without_group_users_but_perms_attached(self):
+        cache.clear()
         self.user1.groups.add(self.group1)
         self.user2.groups.add(self.group2)
         assign_perm("change_contenttype", self.group1, self.obj1)
@@ -385,6 +388,7 @@ class GetGroupsWithPerms(TestCase):
         self.assertEqual(set(result), set([self.group1, self.group2]))
 
     def test_mixed_attach_perms(self):
+        cache.clear()
         assign_perm("change_contenttype", self.group1, self.obj1)
         assign_perm("change_contenttype", self.group1, self.obj2)
         assign_perm("change_group", self.group1, self.group3)

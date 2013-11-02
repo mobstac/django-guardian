@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 import mock
 from django.conf import settings
 from django.contrib.auth.models import Group, AnonymousUser
+from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.db.models.base import ModelBase
 from django.http import HttpRequest
@@ -270,6 +271,7 @@ class PermissionRequiredTest(TestDataMixin, TestCase):
 
     def test_user_has_global_perm_access_but_flag_not_set(self):
 
+        cache.clear()
         perm = get_user_permission_full_codename('change')
         joe, created = User.objects.get_or_create(username='joe')
         assign_perm(perm, self.user)
